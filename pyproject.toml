@@ -1,0 +1,9 @@
+[project]
+name = "ha-solar-manager"
+version = "0.1.0"
+description = "Home Assistant integration for the Solar Manager local API."
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "homeassistant>=2024.12.5",
+]

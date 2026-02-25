@@ -1,0 +1,33 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Solar Manager Local",
+        "description": "Configure local Solar Manager API access. API key is loaded from secrets.yaml.",
+        "data": {
+          "base_url": "Base URL",
+          "api_key_secret": "Secret name for API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "secret_not_found": "Secret not found in secrets.yaml",
+      "invalid_response": "Invalid API response",
+      "unknown": "Unexpected error"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "pv_production_power": {
+        "name": "PV production power"
+      },
+      "home_consumption_power": {
+        "name": "Home consumption power"
+      },
+      "pv_energy_produced_total": {
+        "name": "PV energy produced total"
+      }
+    }
+  }
+}
