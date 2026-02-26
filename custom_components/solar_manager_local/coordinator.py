@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 from numbers import Real
-from typing import Any
+from typing import Any, cast
 
-from aiohttp import ClientError
+from aiohttp import ClientError, ClientTimeout
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -66,7 +66,7 @@ class SolarManagerDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             async with self._session.get(
                 url,
                 headers=headers,
-                timeout=REQUEST_TIMEOUT_SECONDS,
+                timeout=ClientTimeout(total=REQUEST_TIMEOUT_SECONDS),
                 ssl=False,
             ) as response:
                 if response.status != 200:
@@ -75,15 +75,17 @@ class SolarManagerDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         f"Solar Manager API error ({response.status}): {text[:200]}"
                     )
 
-                data = await response.json()
+                raw_data = await response.json()
         except (ClientError, TimeoutError, ValueError) as err:
             raise UpdateFailed(f"Error communicating with Solar Manager API: {err}") from err
 
-        if not isinstance(data, dict):
+        if not isinstance(raw_data, dict):
             raise UpdateFailed("Invalid response from Solar Manager API: expected JSON object")
 
-        timestamp = data.get("t")
-        interval_production_wh = data.get("pWh")
+        data = cast(dict[str, Any], raw_data)
+
+        timestamp: object = data.get("t")
+        interval_production_wh: object = data.get("pWh")
 
         if isinstance(interval_production_wh, Real):
             should_accumulate = True
@@ -93,8 +95,9 @@ class SolarManagerDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 else:
                     self._last_interval_timestamp = timestamp
 
-            if should_accumulate and interval_production_wh >= 0:
-                self._produced_energy_kwh += float(interval_production_wh) / 1000
+            interval_production_wh_float = float(interval_production_wh)
+            if should_accumulate and interval_production_wh_float >= 0:
+                self._produced_energy_kwh += interval_production_wh_float / 1000
 
         data["energy_produced_total_kwh"] = self._produced_energy_kwh
 

@@ -5,6 +5,7 @@ from numbers import Real
 from typing import Any, Callable
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -14,7 +15,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy, UnitOfPower
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, NAME
@@ -70,9 +70,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class SolarManagerSensor(CoordinatorEntity[SolarManagerDataCoordinator], SensorEntity):
-    entity_description: SolarManagerSensorEntityDescription
-
+class SolarManagerSensor(CoordinatorEntity[SolarManagerDataCoordinator], SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
     def __init__(
         self,
         coordinator: SolarManagerDataCoordinator,
@@ -80,7 +78,7 @@ class SolarManagerSensor(CoordinatorEntity[SolarManagerDataCoordinator], SensorE
         description: SolarManagerSensorEntityDescription,
     ) -> None:
         super().__init__(coordinator)
-        self.entity_description = description
+        self._attr_entity_description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
@@ -88,16 +86,18 @@ class SolarManagerSensor(CoordinatorEntity[SolarManagerDataCoordinator], SensorE
             "manufacturer": "Solar Manager",
         }
         self._attr_has_entity_name = True
+        self._value_fn = description.value_fn
 
-    @property
-    def native_value(self) -> Real | None:
-        value = self.entity_description.value_fn(self.coordinator.data)
+    def _handle_coordinator_update(self) -> None:
+        value = self._value_fn(self.coordinator.data)
         if isinstance(value, Real):
-            return value
-        return None
+            self._attr_native_value = float(value)
+        else:
+            self._attr_native_value = None
+        super()._handle_coordinator_update()
 
 
-class SolarManagerAccumulatedEnergySensor(SolarManagerSensor, RestoreEntity):
+class SolarManagerAccumulatedEnergySensor(SolarManagerSensor, RestoreSensor):  # pyright: ignore[reportIncompatibleVariableOverride]
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
 

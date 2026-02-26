@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import yaml
 
@@ -18,12 +19,14 @@ async def async_get_secret_value(hass: HomeAssistant, secret_name: str) -> str |
             return None
 
         with secrets_path.open("r", encoding="utf-8") as file_handle:
-            data = yaml.safe_load(file_handle) or {}
+            loaded_data: object = yaml.safe_load(file_handle)
 
-        if not isinstance(data, dict):
+        if not isinstance(loaded_data, dict):
             return None
 
-        value = data.get(secret_name)
+        data = cast(dict[str, object], loaded_data)
+
+        value: object | None = data.get(secret_name)
         if value is None:
             return None
 

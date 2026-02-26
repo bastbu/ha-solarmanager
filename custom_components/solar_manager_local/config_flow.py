@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-from aiohttp import ClientError
+from aiohttp import ClientError, ClientTimeout
 
 from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -60,7 +61,9 @@ class SolarManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
 
-async def _async_validate_input(hass, base_url: str, api_key_secret: str) -> None:
+async def _async_validate_input(
+    hass: HomeAssistant, base_url: str, api_key_secret: str
+) -> None:
     session = async_get_clientsession(hass)
     api_key = await async_get_secret_value(hass, api_key_secret)
     if not api_key:
@@ -73,7 +76,7 @@ async def _async_validate_input(hass, base_url: str, api_key_secret: str) -> Non
         async with session.get(
             f"{base_url}{ENDPOINT_POINT}",
             headers=headers,
-            timeout=REQUEST_TIMEOUT_SECONDS,
+            timeout=ClientTimeout(total=REQUEST_TIMEOUT_SECONDS),
             ssl=False,
         ) as response:
             if response.status != 200:
