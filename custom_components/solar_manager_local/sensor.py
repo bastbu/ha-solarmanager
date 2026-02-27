@@ -29,7 +29,7 @@ class SolarManagerSensorEntityDescription(SensorEntityDescription):
 SENSOR_DESCRIPTIONS: tuple[SolarManagerSensorEntityDescription, ...] = (
     SolarManagerSensorEntityDescription(
         key="pv_production_power",
-        translation_key="pv_production_power",
+        name="PV production power",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -37,7 +37,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarManagerSensorEntityDescription, ...] = (
     ),
     SolarManagerSensorEntityDescription(
         key="home_consumption_power",
-        translation_key="home_consumption_power",
+        name="Home consumption power",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -45,7 +45,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarManagerSensorEntityDescription, ...] = (
     ),
     SolarManagerSensorEntityDescription(
         key="pv_energy_produced_total",
-        translation_key="pv_energy_produced_total",
+        name="PV energy produced total",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -78,7 +78,7 @@ class SolarManagerSensor(CoordinatorEntity[SolarManagerDataCoordinator], SensorE
         description: SolarManagerSensorEntityDescription,
     ) -> None:
         super().__init__(coordinator)
-        self._attr_entity_description = description
+        self.entity_description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
