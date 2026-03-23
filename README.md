@@ -4,40 +4,43 @@
 [![Open your Home Assistant instance and show the add repository dialog in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bastbu&repository=ha-solarmanager&category=integration)
 [![Open your Home Assistant instance and start setting up this integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=solar_manager_local)
 
-This custom integration reads Solar Manager data from the local `/v2/point` endpoint and exposes three sensors:
+Custom integration that reads data from a Solar Manager device via the local `/v2/point` endpoint.
 
-- `Current power production` → `pW` (W)
-- `Current power consumption` → `cW` (W)
-- `Energy produced` → `pWh` (shown as kWh in Home Assistant)
+### Gateway sensors
 
-Default polling interval is **7 seconds**. If the Home Assistant integration misses polling during a certain window, we will get erroneous total produced energy, which we do not prevent at the moment.
+| Sensor | API field | Unit |
+|---|---|---|
+| PV production power | `pW` | W |
+| Home consumption power | `cW` | W |
+| PV energy produced total | `pWh` (accumulated) | kWh |
+
+### Per-device sensors
+
+Each device in the `devices` array is exposed as a separate Home Assistant device with:
+
+| Sensor | API field | Unit |
+|---|---|---|
+| Power | `power` | W |
+| Temperature | `temperature` | °C |
+| Signal | `signal` | — |
+
+Temperature is only created for devices that report it.
 
 ## Installation
 
-### Via HACS (Custom Repository)
-
 1. Open HACS in Home Assistant.
-2. Add this repository as a **Custom repository** with category **Integration**.
-3. Install **Solar Manager Local**.
-4. Restart Home Assistant.
+2. Add this repository as a **Custom repository** (category: **Integration**).
+3. Install **Solar Manager Local** and restart Home Assistant.
 
-## Secrets
+## Configuration
 
-Set the API key in your `secrets.yaml`:
+Add your API key to `secrets.yaml`:
 
 ```yaml
 solar_manager_api_key: "YOUR_API_KEY"
 ```
 
-In the integration setup, set:
+Then add the integration and provide:
 
-- `Base URL` (for example `http://192.168.1.20`)
-- `Secret name for API key` (default: `solar_manager_api_key`)
-
-## Expected API fields
-
-The integration expects `/v2/point` to return a JSON object containing at least:
-
-- `cW`, `pW`, `pWh`
-
-Additional API fields are ignored.
+- **Base URL** — e.g. `http://192.168.1.20`
+- **Secret name for API key** — default: `solar_manager_api_key`
