@@ -3,20 +3,18 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-from aiohttp import ClientError, ClientTimeout
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .api_client import SolarManagerApiClient, SolarManagerApiError
 from .const import (
     CONF_API_KEY_SECRET,
     CONF_BASE_URL,
     DEFAULT_API_KEY_SECRET,
     DOMAIN,
-    ENDPOINT_POINT,
     NAME,
-    REQUEST_TIMEOUT_SECONDS,
 )
 from .secrets import async_get_secret_value
 
@@ -64,30 +62,17 @@ class SolarManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 async def _async_validate_input(
     hass: HomeAssistant, base_url: str, api_key_secret: str
 ) -> None:
-    session = async_get_clientsession(hass)
     api_key = await async_get_secret_value(hass, api_key_secret)
     if not api_key:
         raise SecretNotFound
 
-    headers = {"Accept": "application/json"}
-    headers["X-API-Key"] = api_key
+    session = async_get_clientsession(hass)
+    client = SolarManagerApiClient(session, base_url, api_key)
 
     try:
-        async with session.get(
-            f"{base_url}{ENDPOINT_POINT}",
-            headers=headers,
-            timeout=ClientTimeout(total=REQUEST_TIMEOUT_SECONDS),
-            ssl=False,
-        ) as response:
-            if response.status != 200:
-                raise CannotConnect
-
-            payload = await response.json()
-    except (ClientError, TimeoutError, ValueError) as err:
+        await client.async_get_point()
+    except SolarManagerApiError as err:
         raise CannotConnect from err
-
-    if not isinstance(payload, dict):
-        raise InvalidResponse
 
 
 class CannotConnect(Exception):

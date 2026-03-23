@@ -16,5 +16,18 @@
       "invalid_response": "Invalid API response",
       "unknown": "Unexpected error"
     }
+  },
+  "entity": {
+    "sensor": {
+      "device_power": {
+        "name": "Power"
+      },
+      "device_temperature": {
+        "name": "Temperature"
+      },
+      "device_signal": {
+        "name": "Signal"
+      }
+    }
   }
 }

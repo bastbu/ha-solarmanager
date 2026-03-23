@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import logging
-from numbers import Real
-from typing import Any, cast
-
-from aiohttp import ClientError, ClientTimeout
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .api_client import SolarManagerApiClient, SolarManagerApiError
 from .const import (
     CONF_API_KEY,
     CONF_API_KEY_SECRET,
@@ -18,23 +15,22 @@ from .const import (
     DEFAULT_API_KEY_SECRET,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    ENDPOINT_POINT,
-    REQUEST_TIMEOUT_SECONDS,
 )
+from .models import PointData
 from .secrets import async_get_secret_value
 
 LOGGER = logging.getLogger(__name__)
 
 
-class SolarManagerDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+class SolarManagerDataCoordinator(DataUpdateCoordinator[PointData]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self._entry = entry
-        self._session = async_get_clientsession(hass)
-        self._base_url: str = str(entry.data[CONF_BASE_URL]).rstrip("/")
         self._api_key: str | None = entry.data.get(CONF_API_KEY)
         self._api_key_secret: str = entry.data.get(
             CONF_API_KEY_SECRET, DEFAULT_API_KEY_SECRET
         )
+        self._base_url: str = str(entry.data[CONF_BASE_URL]).rstrip("/")
+        self._client: SolarManagerApiClient | None = None
         self._produced_energy_kwh: float = 0.0
         self._last_interval_timestamp: str | None = None
 
@@ -53,52 +49,31 @@ class SolarManagerDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def produced_energy_kwh(self) -> float:
         return self._produced_energy_kwh
 
-    async def _async_update_data(self) -> dict[str, Any]:
-        url = f"{self._base_url}{ENDPOINT_POINT}"
-        headers = {"Accept": "application/json"}
-        api_key = self._api_key
-        if not api_key:
-            api_key = await async_get_secret_value(self.hass, self._api_key_secret)
-        if api_key:
-            headers["X-API-Key"] = api_key
+    async def _ensure_client(self) -> SolarManagerApiClient:
+        """Lazily create the API client (resolves secret on first call)."""
+        if self._client is None:
+            api_key = self._api_key
+            if not api_key:
+                api_key = await async_get_secret_value(self.hass, self._api_key_secret)
+            session = async_get_clientsession(self.hass)
+            self._client = SolarManagerApiClient(session, self._base_url, api_key or "")
+        return self._client
+
+    async def _async_update_data(self) -> PointData:
+        client = await self._ensure_client()
 
         try:
-            async with self._session.get(
-                url,
-                headers=headers,
-                timeout=ClientTimeout(total=REQUEST_TIMEOUT_SECONDS),
-                ssl=False,
-            ) as response:
-                if response.status != 200:
-                    text = await response.text()
-                    raise UpdateFailed(
-                        f"Solar Manager API error ({response.status}): {text[:200]}"
-                    )
+            point = await client.async_get_point()
+        except SolarManagerApiError as err:
+            raise UpdateFailed(str(err)) from err
 
-                raw_data = await response.json()
-        except (ClientError, TimeoutError, ValueError) as err:
-            raise UpdateFailed(f"Error communicating with Solar Manager API: {err}") from err
+        should_accumulate = True
+        if point.timestamp and point.timestamp == self._last_interval_timestamp:
+            should_accumulate = False
+        elif point.timestamp:
+            self._last_interval_timestamp = point.timestamp
 
-        if not isinstance(raw_data, dict):
-            raise UpdateFailed("Invalid response from Solar Manager API: expected JSON object")
+        if should_accumulate and point.interval_production_wh >= 0:
+            self._produced_energy_kwh += point.interval_production_wh / 1000
 
-        data = cast(dict[str, Any], raw_data)
-
-        timestamp: object = data.get("t")
-        interval_production_wh: object = data.get("pWh")
-
-        if isinstance(interval_production_wh, Real):
-            should_accumulate = True
-            if isinstance(timestamp, str):
-                if timestamp == self._last_interval_timestamp:
-                    should_accumulate = False
-                else:
-                    self._last_interval_timestamp = timestamp
-
-            interval_production_wh_float = float(interval_production_wh)
-            if should_accumulate and interval_production_wh_float >= 0:
-                self._produced_energy_kwh += interval_production_wh_float / 1000
-
-        data["energy_produced_total_kwh"] = self._produced_energy_kwh
-
-        return data
+        return point
