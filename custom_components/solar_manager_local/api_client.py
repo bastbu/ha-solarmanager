@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from aiohttp import ClientError, ClientSession, ClientTimeout
 
 from .const import ENDPOINT_POINT, REQUEST_TIMEOUT_SECONDS
@@ -51,7 +53,7 @@ class SolarManagerApiClient:
                 "Invalid response from Solar Manager API: expected JSON object"
             )
 
-        return PointData.from_dict(raw_data)
+        return PointData.from_dict(cast(dict[str, Any], raw_data))
 
 
 class SolarManagerApiError(Exception):

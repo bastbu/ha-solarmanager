@@ -7,9 +7,8 @@ so we can feed controlled payloads into the coordinator.
 
 from __future__ import annotations
 
+from math import isclose
 from unittest.mock import AsyncMock, patch
-
-import pytest
 
 from custom_components.solar_manager_local.models import PointData
 from custom_components.solar_manager_local.coordinator import (
@@ -59,8 +58,8 @@ async def _update(coord: SolarManagerDataCoordinator, point: PointData) -> Point
     """Simulate a coordinator update cycle with the given API payload."""
     client = AsyncMock()
     client.async_get_point = AsyncMock(return_value=point)
-    coord._client = client
-    return await coord._async_update_data()
+    coord._client = client  # pyright: ignore[reportPrivateUsage]
+    return await coord._async_update_data()  # pyright: ignore[reportPrivateUsage]
 
 
 # ------------------------------------------------------------------
@@ -71,10 +70,10 @@ async def _update(coord: SolarManagerDataCoordinator, point: PointData) -> Point
 async def test_accumulates_energy() -> None:
     coord = _make_coordinator()
     await _update(coord, _fake_point(pWh=500, t="t1"))
-    assert coord.produced_energy_kwh == pytest.approx(0.5)
+    assert isclose(coord.produced_energy_kwh, 0.5)
 
     await _update(coord, _fake_point(pWh=500, t="t2"))
-    assert coord.produced_energy_kwh == pytest.approx(1.0)
+    assert isclose(coord.produced_energy_kwh, 1.0)
 
 
 async def test_deduplicates_same_timestamp() -> None:
@@ -82,13 +81,13 @@ async def test_deduplicates_same_timestamp() -> None:
     await _update(coord, _fake_point(pWh=500, t="t1"))
     await _update(coord, _fake_point(pWh=500, t="t1"))
     # Second call has same timestamp → should NOT accumulate
-    assert coord.produced_energy_kwh == pytest.approx(0.5)
+    assert isclose(coord.produced_energy_kwh, 0.5)
 
 
 async def test_negative_pWh_ignored() -> None:
     coord = _make_coordinator()
     await _update(coord, _fake_point(pWh=-100, t="t1"))
-    assert coord.produced_energy_kwh == pytest.approx(0.0)
+    assert isclose(coord.produced_energy_kwh, 0.0)
 
 
 # ------------------------------------------------------------------
@@ -99,16 +98,16 @@ async def test_negative_pWh_ignored() -> None:
 async def test_set_initial_positive() -> None:
     coord = _make_coordinator()
     coord.set_initial_produced_energy_kwh(42.5)
-    assert coord.produced_energy_kwh == pytest.approx(42.5)
+    assert isclose(coord.produced_energy_kwh, 42.5)
 
     await _update(coord, _fake_point(pWh=1000, t="t1"))
-    assert coord.produced_energy_kwh == pytest.approx(43.5)
+    assert isclose(coord.produced_energy_kwh, 43.5)
 
 
 async def test_set_initial_negative_rejected() -> None:
     coord = _make_coordinator()
     coord.set_initial_produced_energy_kwh(-1.0)
-    assert coord.produced_energy_kwh == pytest.approx(0.0)
+    assert isclose(coord.produced_energy_kwh, 0.0)
 
 
 # ------------------------------------------------------------------
@@ -120,7 +119,7 @@ async def test_data_contains_point_data() -> None:
     coord = _make_coordinator()
     result = await _update(coord, _fake_point(pWh=200, t="t1"))
     assert isinstance(result, PointData)
-    assert coord.produced_energy_kwh == pytest.approx(0.2)
+    assert isclose(coord.produced_energy_kwh, 0.2)
 
 
 async def test_original_fields_preserved() -> None:

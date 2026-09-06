@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -18,6 +18,7 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -102,6 +103,12 @@ async def async_setup_entry(
 ) -> None:
     coordinator: SolarManagerDataCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[SensorEntity] = []
+    gateway_device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.entry_id)},
+        name=NAME,
+        manufacturer="Solar Manager",
+    )
 
     # ── Gateway-level sensors ───────────────────────────────────────
     for description in SENSOR_DESCRIPTIONS:
@@ -119,7 +126,13 @@ async def async_setup_entry(
             if desc.key == "temperature" and device.temperature is None:
                 continue
             entities.append(
-                SolarManagerDeviceSensor(coordinator, entry, desc, device.device_id)
+                SolarManagerDeviceSensor(
+                    coordinator,
+                    entry,
+                    desc,
+                    device.device_id,
+                    gateway_device.id,
+                )
             )
 
     async_add_entities(entities)
@@ -177,18 +190,19 @@ class SolarManagerDeviceSensor(CoordinatorEntity[SolarManagerDataCoordinator], S
         entry: ConfigEntry,
         description: SolarManagerDeviceSensorDescription,
         device_id: str,
+        gateway_device_id: str,
     ) -> None:
         super().__init__(coordinator)
         self.entity_description = description
         self._device_id = device_id
         short_id = device_id[-6:]
         self._attr_unique_id = f"{entry.entry_id}_{device_id}_{description.key}"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, device_id)},
-            "name": f"Solar Manager Device {short_id}",
-            "manufacturer": "Solar Manager",
-            "via_device": (DOMAIN, entry.entry_id),
-        }
+        self._attr_device_info = dr.DeviceInfo(
+            identifiers={(DOMAIN, device_id)},
+            name=f"Solar Manager Device {short_id}",
+            manufacturer="Solar Manager",
+            via_device_id=gateway_device_id,
+        )
         self._attr_has_entity_name = True
         self._value_fn = description.value_fn
 
