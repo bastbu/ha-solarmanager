@@ -1,7 +1,7 @@
 {
   "domain": "solar_manager_local",
   "name": "Solar Manager Local",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "documentation": "https://solarmanager.zohodesk.com/portal/de/kb/articles/api#Lokale_API",
   "requirements": [],
   "codeowners": [],

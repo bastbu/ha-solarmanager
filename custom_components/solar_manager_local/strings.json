@@ -3,16 +3,31 @@
     "step": {
       "user": {
         "title": "Solar Manager Local",
-        "description": "Configure local Solar Manager API access. API key is loaded from secrets.yaml.",
+        "description": "Enter the address and API key of your Solar Manager.",
         "data": {
           "base_url": "Base URL",
-          "api_key_secret": "Secret name for API key"
+          "api_key": "API key"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Solar Manager Local",
+        "description": "Update the address or API key of your Solar Manager.",
+        "data": {
+          "base_url": "Base URL",
+          "api_key": "API key"
+        },
+        "data_description": {
+          "api_key": "Leave empty to keep the current API key."
         }
       }
     },
+    "abort": {
+      "already_configured": "This Solar Manager is already configured.",
+      "reconfigure_successful": "Configuration updated successfully."
+    },
     "error": {
       "cannot_connect": "Failed to connect",
-      "secret_not_found": "Secret not found in secrets.yaml",
+      "secret_not_found": "The existing API-key secret could not be found. Enter an API key to replace it.",
       "invalid_response": "Invalid API response",
       "unknown": "Unexpected error"
     }

@@ -37,10 +37,7 @@ class SolarManagerApiClient:
                 ssl=False,
             ) as response:
                 if response.status != 200:
-                    text = await response.text()
-                    raise SolarManagerApiError(
-                        f"API error ({response.status}): {text[:200]}"
-                    )
+                    raise SolarManagerApiError(f"API error ({response.status})")
 
                 raw_data = await response.json()
         except (ClientError, TimeoutError, ValueError) as err:

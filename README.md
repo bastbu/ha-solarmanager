@@ -34,13 +34,17 @@ Temperature is only created for devices that report it.
 
 ## Configuration
 
-Add your API key to `secrets.yaml`:
-
-```yaml
-solar_manager_api_key: "YOUR_API_KEY"
-```
-
-Then add the integration and provide:
+Add the integration and provide:
 
 - **Base URL** — e.g. `http://192.168.1.20`
-- **Secret name for API key** — default: `solar_manager_api_key`
+- **API key** — entered in a masked password field
+
+To change these settings later, open **Settings > Devices & Services > Solar Manager Local**
+and select **Reconfigure** from the integration entry's menu. The new settings are
+validated before saving, then the integration reloads without removing its entities.
+Leave the API key empty to keep the current key. Existing configurations that read
+from `secrets.yaml` remain supported; entering a replacement key switches that entry
+to direct storage without changing `secrets.yaml`.
+
+API keys are stored in Home Assistant's configuration entry. Input masking does not
+encrypt stored credentials; protect access to your configuration and backups.
